@@ -1,10 +1,10 @@
 /*
- * zli native client. Does exactly what bin/zli.js does on its hot path: send
+ * qai native client. Does exactly what bin/qai.js does on its hot path: send
  * argv to the running daemon, print the reply. It starts in a few
  * milliseconds where Node needs over a hundred.
  *
  * Anything else (daemon not running, start/stop, --version, stdin input) is
- * handed to bin/zli.js, so behaviour stays defined in one place.
+ * handed to bin/qai.js, so behaviour stays defined in one place.
  *
  * Wire format (see src/daemon.js):
  *   -> {"argv":[...],"cwd":"..."}\n
@@ -194,7 +194,7 @@ static int run_node(int argc, wchar_t **wargv) {
   if (!n || n >= 32768 - 16) return 1;
   wchar_t *slash = wcsrchr(script, L'\\');
   if (!slash) return 1;
-  wcscpy(slash, L"\\..\\bin\\zli.js");
+  wcscpy(slash, L"\\..\\bin\\qai.js");
 
   wchar_t *cmd = NULL;
   size_t len = 0, cap = 0;
@@ -205,7 +205,7 @@ static int run_node(int argc, wchar_t **wargv) {
   STARTUPINFOW si = {sizeof si};
   PROCESS_INFORMATION pi;
   if (!CreateProcessW(NULL, cmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi)) {
-    fprintf(stderr, "zli: could not run node (is it on PATH?)\n");
+    fprintf(stderr, "qai: could not run node (is it on PATH?)\n");
     return 1;
   }
   WaitForSingleObject(pi.hProcess, INFINITE);
@@ -229,9 +229,9 @@ int wmain(int argc, wchar_t **wargv) {
   DWORD ulen = 257;
   if (!GetUserNameW(wuser, &ulen)) wcscpy(wuser, L"user");
   buf_t pipe = {0};
-  buf_str(&pipe, "\\\\.\\pipe\\zli-");
+  buf_str(&pipe, "\\\\.\\pipe\\qai-");
   buf_clean(&pipe, utf8(wuser));
-  const wchar_t *session = _wgetenv(L"ZLI_SESSION");
+  const wchar_t *session = _wgetenv(L"QAI_SESSION");
   if (session && *session) {
     buf_str(&pipe, "-");
     buf_clean(&pipe, utf8(session));
@@ -269,7 +269,7 @@ int wmain(int argc, wchar_t **wargv) {
   int code = print_reply(&reply);
   SetConsoleOutputCP(old_cp);
   if (code < 0) {
-    fprintf(stderr, "zli: daemon closed the connection\n");
+    fprintf(stderr, "qai: daemon closed the connection\n");
     return 1;
   }
   return code;
@@ -294,7 +294,7 @@ static int run_node(char **argv) {
   *slash = 0;
   buf_t script = {0};
   buf_str(&script, real);
-  buf_str(&script, "/../bin/zli.js");
+  buf_str(&script, "/../bin/qai.js");
 
   int argc = 0;
   while (argv[argc]) argc++;
@@ -304,7 +304,7 @@ static int run_node(char **argv) {
   for (int i = 1; i < argc; i++) args[i + 1] = argv[i];
   args[argc + 1] = NULL;
   execvp("node", args);
-  fprintf(stderr, "zli: could not run node (is it on PATH?)\n");
+  fprintf(stderr, "qai: could not run node (is it on PATH?)\n");
   return 1;
 }
 
@@ -325,7 +325,7 @@ int main(int argc, char **argv) {
   const char *runtime = getenv("XDG_RUNTIME_DIR");
   buf_str(&path, runtime && *runtime ? runtime : tmp_dir());
   while (path.len > 1 && path.data[path.len - 1] == '/') path.data[--path.len] = 0;
-  buf_str(&path, "/zli-");
+  buf_str(&path, "/qai-");
   struct passwd *pw = getpwuid(geteuid());
   buf_clean(&path, pw ? pw->pw_name : "user");
 
@@ -333,13 +333,13 @@ int main(int argc, char **argv) {
   struct stat st;
   if (lstat(path.data, &st) < 0) return run_node(argv); /* no daemon yet */
   if (!S_ISDIR(st.st_mode) || st.st_uid != geteuid() || (st.st_mode & 077)) {
-    fprintf(stderr, "zli: %s must be a directory owned by you with mode 700\n",
+    fprintf(stderr, "qai: %s must be a directory owned by you with mode 700\n",
             path.data);
     return 1;
   }
 
   buf_str(&path, "/daemon");
-  const char *session = getenv("ZLI_SESSION");
+  const char *session = getenv("QAI_SESSION");
   if (session && *session) {
     buf_str(&path, "-");
     buf_clean(&path, session);
@@ -380,7 +380,7 @@ int main(int argc, char **argv) {
   close(fd);
   int code = print_reply(&reply);
   if (code < 0) {
-    fprintf(stderr, "zli: daemon closed the connection\n");
+    fprintf(stderr, "qai: daemon closed the connection\n");
     return 1;
   }
   return code;

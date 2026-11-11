@@ -1,10 +1,10 @@
 {
-  "name": "devtools-zli",
+  "name": "devtools-qai",
   "version": "0.1.0",
-  "description": "Zero-overhead Line Interface for Chrome DevTools: the full chrome-devtools-mcp tool set for AI agents at a fraction of the latency and context cost.",
+  "description": "Quick Agent Interface for Chrome DevTools: the full chrome-devtools-mcp tool set for AI agents at a fraction of the latency and context cost.",
   "type": "module",
   "bin": {
-    "zli": "bin/zli.js"
+    "qai": "bin/qai.js"
   },
   "files": [
     "bin",
@@ -36,7 +36,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rezonnnnn/devtools-zli.git"
+    "url": "git+https://github.com/rezonnnnn/devtools-qai.git"
   },
   "devDependencies": {
     "agent-browser": "^0.42.0",

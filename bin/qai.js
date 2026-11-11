@@ -117,7 +117,7 @@ async function main() {
     const ext = process.platform === 'win32' ? '.exe' : '';
     const exe = fileURLToPath(
       new URL(
-        `../native/zli-${process.platform}-${process.arch}${ext}`,
+        `../native/qai-${process.platform}-${process.arch}${ext}`,
         import.meta.url,
       ),
     );
@@ -140,7 +140,7 @@ async function main() {
     if (!notRunning(e)) throw e;
   }
   if (argv[0] === 'status') return {out: 'not running', code: 1};
-  const flags = (process.env.ZLI_FLAGS ?? '').split(/\s+/).filter(Boolean);
+  const flags = (process.env.QAI_FLAGS ?? '').split(/\s+/).filter(Boolean);
   await spawnDaemon(flags);
   return sendWhenUp(req);
 }
@@ -151,6 +151,6 @@ try {
   if (err) process.stderr.write(err + '\n');
   process.exitCode = code ?? 0;
 } catch (e) {
-  process.stderr.write(`zli: ${e.message}\n`);
+  process.stderr.write(`qai: ${e.message}\n`);
   process.exitCode = 1;
 }

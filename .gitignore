@@ -1,5 +1,5 @@
 node_modules/
 *.log
 bench/.tmp/
-native/zli-*
+native/qai-*
 bench/results.json
