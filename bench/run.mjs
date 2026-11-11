@@ -1,6 +1,6 @@
 // Benchmark: the same browser steps through four interfaces.
 //
-//   qai        this project
+//   agent-devtools        this project
 //   official   the `chrome-devtools` CLI shipped inside chrome-devtools-mcp
 //   mcp        chrome-devtools-mcp over a persistent MCP stdio connection
 //   ab         agent-browser (native binary, called directly)
@@ -19,7 +19,7 @@ import {McpClient} from '../src/mcp.js';
 const require = createRequire(import.meta.url);
 const root = path.join(import.meta.dirname, '..');
 const RUNS = Number(process.argv[process.argv.indexOf('--runs') + 1]) || 15;
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'qai-bench-'));
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-devtools-bench-'));
 const tokens = text => encode(text).length;
 const median = xs => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
 
@@ -76,17 +76,17 @@ function cliDriver({name, cmd, pre = [], env, steps, start, stop, uid}) {
   };
 }
 
-const qaiEnv = {QAI_SESSION: `bench-${process.pid}`};
+const adtEnv = {AGENT_DEVTOOLS_SESSION: `bench-${process.pid}`};
 const nativeExe = path.join(
   root,
   'native',
-  `qai-${process.platform}-${process.arch}${process.platform === 'win32' ? '.exe' : ''}`,
+  `agent-devtools-${process.platform}-${process.arch}${process.platform === 'win32' ? '.exe' : ''}`,
 );
-const qaiDriver = (name, cmd, pre) => cliDriver({
+const adtDriver = (name, cmd, pre) => cliDriver({
   name,
   cmd,
   pre,
-  env: qaiEnv,
+  env: adtEnv,
   start: ['start', ...FLAGS],
   stop: ['stop'],
   steps: {
@@ -99,9 +99,9 @@ const qaiDriver = (name, cmd, pre) => cliDriver({
   },
   uid: (snapshot, label) => new RegExp(`^\\s*(\\S+) \\w+ "${label}"`, 'm').exec(snapshot)[1],
 });
-// qai = the native client, qaiNode = bin/qai.js. Same daemon behind both.
-const qai = qaiDriver('qai', nativeExe, []);
-const qaiNode = qaiDriver('qaiNode', process.execPath, [path.join(root, 'bin', 'qai.js')]);
+// agent-devtools = the native client, adtNode = bin/agent-devtools.js. Same daemon behind both.
+const adt = adtDriver('agent-devtools', nativeExe, []);
+const adtNode = adtDriver('adtNode', process.execPath, [path.join(root, 'bin', 'agent-devtools.js')]);
 
 const official = cliDriver({
   name: 'official',
@@ -123,7 +123,7 @@ const official = cliDriver({
 const ab = cliDriver({
   name: 'ab',
   cmd: abExe,
-  env: {AGENT_BROWSER_SESSION: `qaibench${process.pid}`},
+  env: {AGENT_BROWSER_SESSION: `adtbench${process.pid}`},
   stop: ['close'],
   steps: {
     open: url => ['open', url],
@@ -191,7 +191,7 @@ function startFixture() {
 
 // The form task, written the most compact way each interface allows.
 const FORM_DONE = 'Hello Ada agreed blue';
-const qaiForm = d => async url => {
+const adtForm = d => async url => {
     const look = d.run(['open', url, '+', 'snap', '-i']);
     const u = l => d.uid(look.out, l);
     const act = d.run([
@@ -203,8 +203,8 @@ const qaiForm = d => async url => {
     return {ms: look.ms + act.ms, out: look.out + '\n' + act.out, calls: 2};
 };
 const formTask = {
-  qai: qaiForm(qai),
-  qaiNode: qaiForm(qaiNode),
+  'agent-devtools': adtForm(adt),
+  adtNode: adtForm(adtNode),
   async official(url) {
     const look = official.many([
       ['navigate_page', '1', '--type', 'url', '--url', url],
@@ -249,13 +249,13 @@ const formTask = {
   },
 };
 
-const drivers = [qai, qaiNode, official, mcp, ab];
+const drivers = [adt, adtNode, official, mcp, ab];
 const results = {
   date: new Date().toISOString(),
   machine: `${os.cpus()[0].model.trim()}, ${os.platform()} ${os.release()}, Node ${process.version}`,
   runs: RUNS,
   versions: {
-    qai: require('../package.json').version,
+    'agent-devtools': require('../package.json').version,
     'chrome-devtools-mcp': require('chrome-devtools-mcp/package.json').version,
     'agent-browser': require('agent-browser/package.json').version,
   },
@@ -324,11 +324,11 @@ try {
       const schema = JSON.stringify(d.tools());
       results.context.mcp = {what: 'tool definitions, loaded into every session', tokens: tokens(schema), chars: schema.length};
     }
-    if (d.name === 'qai') {
-      const help = qai.run(['help']).out;
-      const skill = fs.readFileSync(path.join(root, 'skills/qai/SKILL.md'), 'utf8');
-      results.context.qai = {what: 'skills/qai/SKILL.md', tokens: tokens(skill), chars: skill.length};
-      results.context['qai help'] = {what: '`qai help`, on demand', tokens: tokens(help), chars: help.length};
+    if (d.name === 'agent-devtools') {
+      const help = adt.run(['help']).out;
+      const skill = fs.readFileSync(path.join(root, 'skills/agent-devtools/SKILL.md'), 'utf8');
+      results.context['agent-devtools'] = {what: 'skills/agent-devtools/SKILL.md', tokens: tokens(skill), chars: skill.length};
+      results.context['agent-devtools help'] = {what: '`agent-devtools help`, on demand', tokens: tokens(help), chars: help.length};
     }
     await d.stop();
   }
@@ -348,8 +348,8 @@ try {
 fs.writeFileSync(path.join(import.meta.dirname, 'results.json'), JSON.stringify(results, null, 2) + '\n');
 
 // ---- report ----
-const names = {qai: 'qai', qaiNode: 'qai (Node client)', official: 'official CLI', mcp: 'MCP server', ab: 'agent-browser'};
-const order = ['qai', 'qaiNode', 'official', 'mcp', 'ab'];
+const names = {'agent-devtools': 'agent-devtools', adtNode: 'agent-devtools (Node client)', official: 'official CLI', mcp: 'MCP server', ab: 'agent-browser'};
+const order = ['agent-devtools', 'adtNode', 'official', 'mcp', 'ab'];
 const ms = v => `${Math.round(v)} ms`;
 const row = cells => `| ${cells.join(' | ')} |`;
 const head = cols => [row(cols), row(cols.map((_, i) => (i ? '--:' : '---')))];
@@ -365,7 +365,7 @@ const md = [
   '# Benchmark results',
   '',
   `Generated by \`npm run bench\` on ${results.date.slice(0, 10)}. ${results.machine}.`,
-  `qai ${results.versions.qai}, chrome-devtools-mcp ${results.versions['chrome-devtools-mcp']}, agent-browser ${results.versions['agent-browser']}. Tokens: ${results.tokenizer}.`,
+  `agent-devtools ${results.versions['agent-devtools']}, chrome-devtools-mcp ${results.versions['chrome-devtools-mcp']}, agent-browser ${results.versions['agent-browser']}. Tokens: ${results.tokenizer}.`,
   '',
   `## Warm latency per command (median of ${RUNS})`,
   '',
@@ -393,7 +393,7 @@ const md = [
   '## Fixed context cost',
   '',
   ...head(['interface', 'what the agent loads', 'tokens']),
-  ...['qai', 'qai help', 'official', 'mcp', 'ab'].map(n => row([names[n] ?? n, results.context[n].what, results.context[n].tokens])),
+  ...['agent-devtools', 'agent-devtools help', 'official', 'mcp', 'ab'].map(n => row([names[n] ?? n, results.context[n].what, results.context[n].tokens])),
   '',
 ].join('\n');
 fs.writeFileSync(path.join(import.meta.dirname, 'RESULTS.md'), md);

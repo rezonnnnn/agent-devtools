@@ -1,5 +1,5 @@
 node_modules/
 *.log
 bench/.tmp/
-native/qai-*
+native/agent-devtools-*
 bench/results.json

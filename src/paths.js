@@ -1,5 +1,5 @@
 // Shared by the client and the daemon. Keep this file dependency-light: the
-// client loads it on every command. native/qai.c mirrors these paths.
+// client loads it on every command. native/agent-devtools.c mirrors these paths.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -15,13 +15,13 @@ function userName() {
 }
 
 // A directory only this user can enter. It holds the socket (POSIX) and every
-// file qai writes, so nothing lives directly in a shared temp directory.
+// file agent-devtools writes, so nothing lives directly in a shared temp directory.
 export function runtimeDir() {
   const base =
     process.platform === 'win32'
       ? os.tmpdir()
       : process.env.XDG_RUNTIME_DIR || os.tmpdir();
-  return path.join(base, `qai-${userName()}`);
+  return path.join(base, `agent-devtools-${userName()}`);
 }
 
 // Throws unless `dir` is a real directory owned by this user and closed to
@@ -36,12 +36,12 @@ export function assertPrivateDir(dir) {
   }
 }
 
-// One daemon per (user, session). QAI_SESSION lets several agents each own a
+// One daemon per (user, session). AGENT_DEVTOOLS_SESSION lets several agents each own a
 // separate browser.
-export function sockPath(session = process.env.QAI_SESSION || '') {
+export function sockPath(session = process.env.AGENT_DEVTOOLS_SESSION || '') {
   const suffix = session ? '-' + clean(session) : '';
   if (process.platform === 'win32') {
-    return `\\\\.\\pipe\\qai-${userName()}${suffix}`;
+    return `\\\\.\\pipe\\agent-devtools-${userName()}${suffix}`;
   }
   return path.join(runtimeDir(), `daemon${suffix}.sock`);
 }

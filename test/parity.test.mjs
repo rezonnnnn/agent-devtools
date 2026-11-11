@@ -1,10 +1,10 @@
 // Parity: whatever tool catalogue chrome-devtools-mcp reports for a set of
-// flags, qai exposes exactly that catalogue, and can build a call for each.
+// flags, agent-devtools exposes exactly that catalogue, and can build a call for each.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import {parseCommand, splitChain, usage} from '../src/args.js';
 import {McpClient} from '../src/mcp.js';
-import {BROWSER_FLAGS, makeQai} from './helpers.mjs';
+import {BROWSER_FLAGS, makeAdt} from './helpers.mjs';
 
 const BASE = [...BROWSER_FLAGS, '--no-usage-statistics'];
 // Every opt-in category and experiment upstream documents.
@@ -27,8 +27,8 @@ async function upstreamCatalogue(flags) {
   return tools;
 }
 
-const qai = makeQai(`parity-${process.pid}`);
-after(() => qai('stop'));
+const adt = makeAdt(`parity-${process.pid}`);
+after(() => adt('stop'));
 
 for (const [label, flags] of [
   ['default flags', BASE],
@@ -36,8 +36,8 @@ for (const [label, flags] of [
 ]) {
   test(`catalogue matches upstream: ${label}`, async () => {
     const upstream = await upstreamCatalogue(flags);
-    qai.ok('start', ...flags);
-    const ours = JSON.parse(qai.ok('tools'));
+    adt.ok('start', ...flags);
+    const ours = JSON.parse(adt.ok('tools'));
     assert.deepEqual(
       ours.map(t => t.name),
       upstream.map(t => t.name),
@@ -45,7 +45,7 @@ for (const [label, flags] of [
     assert.deepEqual(ours, upstream);
     console.log(`  ${label}: ${ours.length} tools`);
     for (const t of ours) {
-      assert.equal(qai('help', t.name).code, 0, t.name);
+      assert.equal(adt('help', t.name).code, 0, t.name);
     }
   });
 }

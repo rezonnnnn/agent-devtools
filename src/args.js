@@ -1,4 +1,4 @@
-// Turns `qai <command> ...` tokens into an MCP tool call, driven entirely by
+// Turns `agent-devtools <command> ...` tokens into an MCP tool call, driven entirely by
 // the tool schemas the server reports. No tool is hard-coded here except the
 // short aliases, so new upstream tools work without a release.
 import path from 'node:path';
@@ -33,7 +33,7 @@ export const ALIASES = {
   resize: ['resize_page', {}],
 };
 
-// Options handled by qai itself. A tool parameter with the same name wins.
+// Options handled by agent-devtools itself. A tool parameter with the same name wins.
 const OWN_OPTS = {
   raw: 'boolean',
   json: 'boolean',
@@ -60,11 +60,11 @@ export function resolveCommand(name, tools) {
   if (matches.length === 1) return {tool: matches[0], preset: {}};
   const hint = matches.length
     ? `ambiguous: ${matches.map(t => t.name).join(', ')}`
-    : 'run `qai help` for the command list';
+    : 'run `agent-devtools help` for the command list';
   throw new UsageError(`unknown command "${name}" (${hint})`);
 }
 
-// For these two the page is the subject of the command: `qai page 2`.
+// For these two the page is the subject of the command: `agent-devtools page 2`.
 const PAGE_IS_ARG = new Set(['select_page', 'close_page']);
 const hidesPageId = tool => !PAGE_IS_ARG.has(tool.name);
 
@@ -229,7 +229,7 @@ export function parseCommand(tokens, tools, {cwd, stdin} = {}) {
   }
   if (queue.length) {
     throw new UsageError(
-      `${tool.name}: unexpected argument "${queue[0]}"\nusage: qai ${usage(tool)}`,
+      `${tool.name}: unexpected argument "${queue[0]}"\nusage: agent-devtools ${usage(tool)}`,
     );
   }
   const missing = (tool.inputSchema.required ?? []).filter(
@@ -237,12 +237,12 @@ export function parseCommand(tokens, tools, {cwd, stdin} = {}) {
   );
   if (missing.length) {
     throw new UsageError(
-      `${tool.name}: missing ${missing.join(', ')}\nusage: qai ${usage(tool)}`,
+      `${tool.name}: missing ${missing.join(', ')}\nusage: agent-devtools ${usage(tool)}`,
     );
   }
 
   // The tool expects a function. Accept a bare expression too
-  // (`qai eval document.title`): evaluate the source, and call the result only
+  // (`agent-devtools eval document.title`): evaluate the source, and call the result only
   // if it is a function. Deciding at run time needs no guessing from the text.
   if (
     tool.name === 'evaluate_script' &&
@@ -266,7 +266,7 @@ export function parseCommand(tokens, tools, {cwd, stdin} = {}) {
 }
 
 // Splits `a 1 + b 2` into [[a, 1], [b, 2]]. After `--` everything belongs to
-// the current command, so a literal + can be passed: `qai press_key -- +`.
+// the current command, so a literal + can be passed: `agent-devtools press_key -- +`.
 export function splitChain(argv) {
   const chain = [[]];
   let literal = false;

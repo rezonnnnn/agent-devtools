@@ -49,8 +49,8 @@ function send(req) {
   });
 }
 
-// Flags from QAI_FLAGS apply to every daemon start, implicit or `qai start`.
-const envFlags = () => (process.env.QAI_FLAGS ?? '').split(/\s+/).filter(Boolean);
+// Flags from AGENT_DEVTOOLS_FLAGS apply to every daemon start, implicit or `agent-devtools start`.
+const envFlags = () => (process.env.AGENT_DEVTOOLS_FLAGS ?? '').split(/\s+/).filter(Boolean);
 
 const notRunning = e => e.code === 'ENOENT' || e.code === 'ECONNREFUSED';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -120,7 +120,7 @@ async function main() {
     const ext = process.platform === 'win32' ? '.exe' : '';
     const exe = fileURLToPath(
       new URL(
-        `../native/qai-${process.platform}-${process.arch}${ext}`,
+        `../native/agent-devtools-${process.platform}-${process.arch}${ext}`,
         import.meta.url,
       ),
     );
@@ -132,7 +132,7 @@ async function main() {
   }
   if (argv[0] === 'start') {
     await stop();
-    // Explicit flags come last, so `--no-headless` overrides QAI_FLAGS.
+    // Explicit flags come last, so `--no-headless` overrides AGENT_DEVTOOLS_FLAGS.
     await spawnDaemon([...envFlags(), ...argv.slice(1)]);
     return sendWhenUp({argv: ['status']});
   }
@@ -154,6 +154,6 @@ try {
   if (err) process.stderr.write(err + '\n');
   process.exitCode = code ?? 0;
 } catch (e) {
-  process.stderr.write(`qai: ${e.message}\n`);
+  process.stderr.write(`agent-devtools: ${e.message}\n`);
   process.exitCode = 1;
 }

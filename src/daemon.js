@@ -107,7 +107,7 @@ function help(topic) {
   if (topic) {
     const {tool} = resolveCommand(topic, mcp.tools);
     const props = tool.inputSchema.properties ?? {};
-    const lines = [`qai ${usage(tool)}`, tool.description];
+    const lines = [`agent-devtools ${usage(tool)}`, tool.description];
     for (const [name, def] of Object.entries(props)) {
       if (name === 'pageId') continue;
       const type = def.enum ? def.enum.join('|') : def.type;
@@ -122,8 +122,8 @@ function help(topic) {
       return `${alias}=${tool}${fixed}`;
     });
   return [
-    'qai <command> [args] [--option value]    chain commands with +',
-    '  e.g. qai open https://example.com + snap -i',
+    'agent-devtools <command> [args] [--option value]    chain commands with +',
+    '  e.g. agent-devtools open https://example.com + snap -i',
     'Required parameters are positional, in the order shown. Unique prefixes work.',
     'Options on any command: --page N (default: selected page), --raw (upstream',
     'text verbatim), --json, --max N (truncate to N chars). Snapshots: -i',
@@ -134,8 +134,8 @@ function help(topic) {
     ...mcp.tools.map(t => '  ' + usage(t)),
     '',
     'Aliases: ' + aliases.join(' '),
-    'Daemon: qai start [chrome-devtools-mcp flags] | qai stop | qai status',
-    'Details: qai help <command>',
+    'Daemon: agent-devtools start [chrome-devtools-mcp flags] | agent-devtools stop | agent-devtools status',
+    'Details: agent-devtools help <command>',
   ].join('\n');
 }
 
@@ -147,7 +147,7 @@ async function handle(req) {
     setImmediate(() => shutdown(0));
     return {out: 'stopped', code: 0};
   }
-  if (stopping) return {err: 'qai daemon is stopping', code: 1};
+  if (stopping) return {err: 'agent-devtools daemon is stopping', code: 1};
   await ready;
   if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') {
     return {out: help(argv[1]), code: 0};
@@ -155,7 +155,7 @@ async function handle(req) {
   if (cmd === 'status') {
     return {
       out:
-        `qai daemon pid=${process.pid} since=${startedAt.toISOString()} ` +
+        `agent-devtools daemon pid=${process.pid} since=${startedAt.toISOString()} ` +
         `engine=chrome-devtools-mcp@${upstreamBin().version} ` +
         `tools=${mcp.tools.length} flags=${JSON.stringify(userFlags)}`,
       code: 0,
@@ -210,7 +210,7 @@ const server = net.createServer(socket => {
 async function shutdown(code) {
   if (stopping) return;
   stopping = true;
-  // Close the browser before releasing the socket, so a `qai start` that
+  // Close the browser before releasing the socket, so a `agent-devtools start` that
   // follows never races the old browser for its profile.
   await mcp.close();
   server.close();

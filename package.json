@@ -1,10 +1,10 @@
 {
-  "name": "devtools-qai",
+  "name": "agent-devtools",
   "version": "0.1.0",
-  "description": "Quick Agent Interface for Chrome DevTools: the full chrome-devtools-mcp tool set for AI agents at a fraction of the latency and context cost.",
+  "description": "Chrome DevTools for AI agents: the full chrome-devtools-mcp tool set for AI agents at a fraction of the latency and context cost.",
   "type": "module",
   "bin": {
-    "qai": "bin/qai.js"
+    "agent-devtools": "bin/agent-devtools.js"
   },
   "files": [
     "bin",
@@ -36,7 +36,7 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/rezonnnnn/devtools-qai.git"
+    "url": "git+https://github.com/rezonnnnn/agent-devtools.git"
   },
   "devDependencies": {
     "agent-browser": "^0.42.0",

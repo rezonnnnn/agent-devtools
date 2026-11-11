@@ -2,11 +2,11 @@ import {spawn, spawnSync} from 'node:child_process';
 import path from 'node:path';
 
 const root = path.join(import.meta.dirname, '..');
-const bin = path.join(root, 'bin', 'qai.js');
+const bin = path.join(root, 'bin', 'agent-devtools.js');
 
 // Each test file drives its own daemon and browser.
-export function makeQai(session, cwd = root, extraEnv = {}) {
-  const env = {...process.env, QAI_SESSION: session, ...extraEnv};
+export function makeAdt(session, cwd = root, extraEnv = {}) {
+  const env = {...process.env, AGENT_DEVTOOLS_SESSION: session, ...extraEnv};
   const run = (...args) => {
     const input = typeof args.at(-1) === 'object' ? args.pop().input : undefined;
     const r = spawnSync(process.execPath, [bin, ...args], {
@@ -22,7 +22,7 @@ export function makeQai(session, cwd = root, extraEnv = {}) {
   run.ok = (...args) => {
     const r = run(...args);
     if (r.code !== 0) {
-      throw new Error(`qai ${args.join(' ')} -> ${r.code}\n${r.out}\n${r.err}`);
+      throw new Error(`agent-devtools ${args.join(' ')} -> ${r.code}\n${r.out}\n${r.err}`);
     }
     return r.out;
   };
@@ -54,5 +54,5 @@ export function uidOf(snapshot, pattern) {
 export const BROWSER_FLAGS = [
   '--headless',
   '--isolated',
-  ...(process.env.QAI_TEST_FLAGS ?? '').split(' ').filter(Boolean),
+  ...(process.env.AGENT_DEVTOOLS_TEST_FLAGS ?? '').split(' ').filter(Boolean),
 ];

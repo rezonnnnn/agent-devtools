@@ -1,4 +1,4 @@
-// Cross-compiles native/qai.c for every supported platform with `zig cc`.
+// Cross-compiles native/agent-devtools.c for every supported platform with `zig cc`.
 // Usage: node scripts/build-native.mjs [--host]   (--host: this platform only)
 // Zig is found on PATH or through the ZIG environment variable.
 import {spawnSync} from 'node:child_process';
@@ -27,11 +27,11 @@ for (const name of wanted) {
   const out = path.join(
     root,
     'native',
-    `qai-${name}${name.startsWith('win32') ? '.exe' : ''}`,
+    `agent-devtools-${name}${name.startsWith('win32') ? '.exe' : ''}`,
   );
   const args = ['cc', '-target', target, '-O2', '-s', '-o', out];
   if (name.startsWith('win32')) args.push('-municode');
-  args.push(path.join(root, 'native', 'qai.c'));
+  args.push(path.join(root, 'native', 'agent-devtools.c'));
   const r = spawnSync(zig, args, {stdio: 'inherit'});
   if (r.status !== 0) process.exit(r.status ?? 1);
   if (out.endsWith('.exe')) {
