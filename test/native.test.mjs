@@ -1,25 +1,25 @@
-// The native client must be indistinguishable from bin/cdt.js. Skipped when
+// The native client must be indistinguishable from bin/zli.js. Skipped when
 // the binary for this platform has not been built (npm run build:native).
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import {after, before, test} from 'node:test';
-import {BROWSER_FLAGS, makeCdt} from './helpers.mjs';
+import {BROWSER_FLAGS, makeZli} from './helpers.mjs';
 
 const exe = path.join(
   import.meta.dirname,
   '..',
   'native',
-  `cdt-${process.platform}-${process.arch}${process.platform === 'win32' ? '.exe' : ''}`,
+  `zli-${process.platform}-${process.arch}${process.platform === 'win32' ? '.exe' : ''}`,
 );
 const skip = !fs.existsSync(exe) && 'native client not built';
 const session = `native-${process.pid}`;
-const node = makeCdt(session);
+const node = makeZli(session);
 
 function native(...args) {
   const r = spawnSync(exe, args, {
-    env: {...process.env, CDT_SESSION: session},
+    env: {...process.env, ZLI_SESSION: session},
     encoding: 'utf8',
     timeout: 120_000,
   });
@@ -34,7 +34,7 @@ after(() => node('stop'));
 test('with no daemon it hands over to node, which starts one', {skip}, () => {
   const r = native('start', ...BROWSER_FLAGS);
   assert.equal(r.code, 0, r.err);
-  assert.match(r.out, /^cdt daemon pid=/);
+  assert.match(r.out, /^zli daemon pid=/);
 });
 
 test('same output and exit codes as the node client', {skip}, () => {

@@ -48,7 +48,7 @@ export class McpClient {
     const init = await this.request('initialize', {
       protocolVersion: PROTOCOL_VERSION,
       capabilities: {roots: {listChanged: true}},
-      clientInfo: {name: 'chromedevtools-cli', version: '0.1.0'},
+      clientInfo: {name: 'devtools-zli', version: '0.1.0'},
     });
     this.serverInfo = init.serverInfo ?? {};
     this.#notify('notifications/initialized');

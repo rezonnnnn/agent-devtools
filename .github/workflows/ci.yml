@@ -24,9 +24,9 @@ jobs:
       - run: npm test
         env:
           # Hosted Linux runners cannot use Chrome's sandbox.
-          CDT_TEST_FLAGS: ${{ runner.os == 'Linux' && '--chromeArg=--no-sandbox' || '' }}
+          ZLI_TEST_FLAGS: ${{ runner.os == 'Linux' && '--chromeArg=--no-sandbox' || '' }}
       - uses: actions/upload-artifact@v4
         if: matrix.os == 'ubuntu-latest'
         with:
           name: native-clients
-          path: native/cdt-*
+          path: native/zli-*

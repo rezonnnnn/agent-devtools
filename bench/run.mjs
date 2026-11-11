@@ -1,6 +1,6 @@
 // Benchmark: the same browser steps through four interfaces.
 //
-//   cdt        this project
+//   zli        this project
 //   official   the `chrome-devtools` CLI shipped inside chrome-devtools-mcp
 //   mcp        chrome-devtools-mcp over a persistent MCP stdio connection
 //   ab         agent-browser (native binary, called directly)
@@ -19,7 +19,7 @@ import {McpClient} from '../src/mcp.js';
 const require = createRequire(import.meta.url);
 const root = path.join(import.meta.dirname, '..');
 const RUNS = Number(process.argv[process.argv.indexOf('--runs') + 1]) || 15;
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cdt-bench-'));
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'zli-bench-'));
 const tokens = text => encode(text).length;
 const median = xs => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
 
@@ -76,17 +76,17 @@ function cliDriver({name, cmd, pre = [], env, steps, start, stop, uid}) {
   };
 }
 
-const cdtEnv = {CDT_SESSION: `bench-${process.pid}`};
+const zliEnv = {ZLI_SESSION: `bench-${process.pid}`};
 const nativeExe = path.join(
   root,
   'native',
-  `cdt-${process.platform}-${process.arch}${process.platform === 'win32' ? '.exe' : ''}`,
+  `zli-${process.platform}-${process.arch}${process.platform === 'win32' ? '.exe' : ''}`,
 );
-const cdtDriver = (name, cmd, pre) => cliDriver({
+const zliDriver = (name, cmd, pre) => cliDriver({
   name,
   cmd,
   pre,
-  env: cdtEnv,
+  env: zliEnv,
   start: ['start', ...FLAGS],
   stop: ['stop'],
   steps: {
@@ -99,9 +99,9 @@ const cdtDriver = (name, cmd, pre) => cliDriver({
   },
   uid: (snapshot, label) => new RegExp(`^\\s*(\\S+) \\w+ "${label}"`, 'm').exec(snapshot)[1],
 });
-// cdt = the native client, cdtNode = bin/cdt.js. Same daemon behind both.
-const cdt = cdtDriver('cdt', nativeExe, []);
-const cdtNode = cdtDriver('cdtNode', process.execPath, [path.join(root, 'bin', 'cdt.js')]);
+// zli = the native client, zliNode = bin/zli.js. Same daemon behind both.
+const zli = zliDriver('zli', nativeExe, []);
+const zliNode = zliDriver('zliNode', process.execPath, [path.join(root, 'bin', 'zli.js')]);
 
 const official = cliDriver({
   name: 'official',
@@ -123,7 +123,7 @@ const official = cliDriver({
 const ab = cliDriver({
   name: 'ab',
   cmd: abExe,
-  env: {AGENT_BROWSER_SESSION: `cdtbench${process.pid}`},
+  env: {AGENT_BROWSER_SESSION: `zlibench${process.pid}`},
   stop: ['close'],
   steps: {
     open: url => ['open', url],
@@ -191,7 +191,7 @@ function startFixture() {
 
 // The form task, written the most compact way each interface allows.
 const FORM_DONE = 'Hello Ada agreed blue';
-const cdtForm = d => async url => {
+const zliForm = d => async url => {
     const look = d.run(['open', url, '+', 'snap', '-i']);
     const u = l => d.uid(look.out, l);
     const act = d.run([
@@ -203,8 +203,8 @@ const cdtForm = d => async url => {
     return {ms: look.ms + act.ms, out: look.out + '\n' + act.out, calls: 2};
 };
 const formTask = {
-  cdt: cdtForm(cdt),
-  cdtNode: cdtForm(cdtNode),
+  zli: zliForm(zli),
+  zliNode: zliForm(zliNode),
   async official(url) {
     const look = official.many([
       ['navigate_page', '1', '--type', 'url', '--url', url],
@@ -249,13 +249,13 @@ const formTask = {
   },
 };
 
-const drivers = [cdt, cdtNode, official, mcp, ab];
+const drivers = [zli, zliNode, official, mcp, ab];
 const results = {
   date: new Date().toISOString(),
   machine: `${os.cpus()[0].model.trim()}, ${os.platform()} ${os.release()}, Node ${process.version}`,
   runs: RUNS,
   versions: {
-    cdt: require('../package.json').version,
+    zli: require('../package.json').version,
     'chrome-devtools-mcp': require('chrome-devtools-mcp/package.json').version,
     'agent-browser': require('agent-browser/package.json').version,
   },
@@ -324,11 +324,11 @@ try {
       const schema = JSON.stringify(d.tools());
       results.context.mcp = {what: 'tool definitions, loaded into every session', tokens: tokens(schema), chars: schema.length};
     }
-    if (d.name === 'cdt') {
-      const help = cdt.run(['help']).out;
-      const skill = fs.readFileSync(path.join(root, 'skills/cdt/SKILL.md'), 'utf8');
-      results.context.cdt = {what: 'skills/cdt/SKILL.md', tokens: tokens(skill), chars: skill.length};
-      results.context['cdt help'] = {what: '`cdt help`, on demand', tokens: tokens(help), chars: help.length};
+    if (d.name === 'zli') {
+      const help = zli.run(['help']).out;
+      const skill = fs.readFileSync(path.join(root, 'skills/zli/SKILL.md'), 'utf8');
+      results.context.zli = {what: 'skills/zli/SKILL.md', tokens: tokens(skill), chars: skill.length};
+      results.context['zli help'] = {what: '`zli help`, on demand', tokens: tokens(help), chars: help.length};
     }
     await d.stop();
   }
@@ -348,8 +348,8 @@ try {
 fs.writeFileSync(path.join(import.meta.dirname, 'results.json'), JSON.stringify(results, null, 2) + '\n');
 
 // ---- report ----
-const names = {cdt: 'cdt', cdtNode: 'cdt (Node client)', official: 'official CLI', mcp: 'MCP server', ab: 'agent-browser'};
-const order = ['cdt', 'cdtNode', 'official', 'mcp', 'ab'];
+const names = {zli: 'zli', zliNode: 'zli (Node client)', official: 'official CLI', mcp: 'MCP server', ab: 'agent-browser'};
+const order = ['zli', 'zliNode', 'official', 'mcp', 'ab'];
 const ms = v => `${Math.round(v)} ms`;
 const row = cells => `| ${cells.join(' | ')} |`;
 const head = cols => [row(cols), row(cols.map((_, i) => (i ? '--:' : '---')))];
@@ -365,7 +365,7 @@ const md = [
   '# Benchmark results',
   '',
   `Generated by \`npm run bench\` on ${results.date.slice(0, 10)}. ${results.machine}.`,
-  `cdt ${results.versions.cdt}, chrome-devtools-mcp ${results.versions['chrome-devtools-mcp']}, agent-browser ${results.versions['agent-browser']}. Tokens: ${results.tokenizer}.`,
+  `zli ${results.versions.zli}, chrome-devtools-mcp ${results.versions['chrome-devtools-mcp']}, agent-browser ${results.versions['agent-browser']}. Tokens: ${results.tokenizer}.`,
   '',
   `## Warm latency per command (median of ${RUNS})`,
   '',
@@ -393,7 +393,7 @@ const md = [
   '## Fixed context cost',
   '',
   ...head(['interface', 'what the agent loads', 'tokens']),
-  ...['cdt', 'cdt help', 'official', 'mcp', 'ab'].map(n => row([names[n] ?? n, results.context[n].what, results.context[n].tokens])),
+  ...['zli', 'zli help', 'official', 'mcp', 'ab'].map(n => row([names[n] ?? n, results.context[n].what, results.context[n].tokens])),
   '',
 ].join('\n');
 fs.writeFileSync(path.join(import.meta.dirname, 'RESULTS.md'), md);
