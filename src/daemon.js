@@ -2,9 +2,10 @@
 // Long-lived process: owns the chrome-devtools-mcp server (and through it the
 // browser) and answers one request per client connection.
 //
-// Wire format, one JSON line each way:
-//   -> {argv: string[], cwd: string, stdin?: string}
-//   <- {out: string, err: string, code: number}
+// Wire format:
+//   -> one JSON line: {argv: string[], cwd: string, stdin?: string}
+//   <- header line `<exit code> <stdout bytes> <stderr bytes>`, then the two
+//      UTF-8 payloads back to back. Trivial to read from any language.
 import fs from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
@@ -105,8 +106,8 @@ function help(topic) {
   const aliases = Object.entries(ALIASES)
     .filter(([, [tool]]) => mcp.tools.some(t => t.name === tool))
     .map(([alias, [tool, preset]]) => {
-      const fixed = Object.values(preset).join(' ');
-      return `${alias}=${tool}${fixed && fixed !== 'url' ? ':' + fixed : ''}`;
+      const fixed = preset.type && preset.type !== 'url' ? ':' + preset.type : '';
+      return `${alias}=${tool}${fixed}`;
     });
   return [
     'cdt <command> [args] [--option value]    chain commands with +',
@@ -180,7 +181,15 @@ const server = net.createServer(socket => {
       if (!(e instanceof UsageError)) log(e.stack ?? String(e));
       reply = {err: e.message, code: e instanceof UsageError ? 2 : 1};
     }
-    socket.end(JSON.stringify({out: '', err: '', ...reply}) + '\n');
+    const out = Buffer.from(reply.out ?? '');
+    const err = Buffer.from(reply.err ?? '');
+    socket.end(
+      Buffer.concat([
+        Buffer.from(`${reply.code} ${out.length} ${err.length}\n`),
+        out,
+        err,
+      ]),
+    );
   });
 });
 

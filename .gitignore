@@ -1,3 +1,5 @@
 node_modules/
 *.log
 bench/.tmp/
+native/cdt-*
+bench/results.json

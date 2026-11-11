@@ -4,9 +4,9 @@ import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import {parseCommand, usage} from '../src/args.js';
 import {McpClient} from '../src/mcp.js';
-import {makeCdt} from './helpers.mjs';
+import {BROWSER_FLAGS, makeCdt} from './helpers.mjs';
 
-const BASE = ['--headless', '--isolated', '--no-usage-statistics'];
+const BASE = [...BROWSER_FLAGS, '--no-usage-statistics'];
 // Every opt-in category and experiment upstream documents.
 const EVERYTHING = [
   ...BASE,

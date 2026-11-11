@@ -9,11 +9,13 @@
   "files": [
     "bin",
     "src",
-    "skills"
+    "skills",
+    "native"
   ],
   "scripts": {
     "test": "node --test --test-concurrency=1 \"test/*.test.mjs\"",
-    "bench": "node bench/run.mjs"
+    "bench": "node bench/run.mjs",
+    "build:native": "node scripts/build-native.mjs"
   },
   "engines": {
     "node": ">=20.19.0"
@@ -35,5 +37,9 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rezonnnnn/Chromedevtools-CLI.git"
+  },
+  "devDependencies": {
+    "agent-browser": "^0.42.0",
+    "gpt-tokenizer": "^4.1.2"
   }
 }

@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import {after, before, test} from 'node:test';
-import {makeCdt, startFixture, uidOf} from './helpers.mjs';
+import {BROWSER_FLAGS, makeCdt, startFixture, uidOf} from './helpers.mjs';
 
 const work = fs.mkdtempSync(path.join(os.tmpdir(), 'cdt-e2e-'));
 const cdt = makeCdt(`e2e-${process.pid}`, work);
@@ -18,12 +18,12 @@ function tool(name, ...args) {
   used.add(name);
   return cdt.ok(name, ...args);
 }
-const outText = () => JSON.parse(cdt.ok('eval', 'out.textContent', '--no-waitForStableDom'));
+const outText = () => JSON.parse(cdt.ok('eval', 'out.textContent'));
 const snap = () => tool('take_snapshot');
 
 before(async () => {
   fixture = await startFixture();
-  cdt.ok('start', '--headless', '--isolated');
+  cdt.ok('start', ...BROWSER_FLAGS);
   used.add('navigate_page');
   cdt.ok('open', fixture.url);
 });

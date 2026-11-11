@@ -13,8 +13,10 @@ export const ALIASES = {
   reload: ['navigate_page', {type: 'reload'}],
   snap: ['take_snapshot', {}],
   shot: ['take_screenshot', {}],
-  eval: ['evaluate_script', {}],
-  js: ['evaluate_script', {}],
+  // Reads a value, so it skips the engine's wait for the DOM to settle.
+  // `evaluate_script` keeps the upstream default for scripts that mutate.
+  eval: ['evaluate_script', {waitForStableDom: false}],
+  js: ['evaluate_script', {waitForStableDom: false}],
   pages: ['list_pages', {}],
   page: ['select_page', {}],
   new: ['new_page', {}],

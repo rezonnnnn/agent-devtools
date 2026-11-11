@@ -10,17 +10,29 @@ const sock = sockPath();
 function send(req) {
   return new Promise((resolve, reject) => {
     const socket = net.connect(sock);
-    let buf = '';
-    socket.setEncoding('utf8');
+    let buf = Buffer.alloc(0);
     socket.on('connect', () => socket.write(JSON.stringify(req) + '\n'));
-    socket.on('data', d => (buf += d));
     socket.on('error', reject);
-    socket.on('end', () => {
-      try {
-        resolve(JSON.parse(buf));
-      } catch {
-        reject(new Error('cdt: daemon closed the connection'));
-      }
+    socket.on('end', () => reject(new Error('daemon closed the connection')));
+    socket.on('data', d => {
+      // Header line `<code> <out bytes> <err bytes>`, then both payloads.
+      // Return as soon as they are complete: on Windows the end-of-stream
+      // signal trails the data by tens of milliseconds.
+      buf = Buffer.concat([buf, d]);
+      const nl = buf.indexOf(10);
+      if (nl < 0) return;
+      const [code, outLen, errLen] = buf
+        .toString('utf8', 0, nl)
+        .split(' ')
+        .map(Number);
+      const body = nl + 1;
+      if (buf.length < body + outLen + errLen) return;
+      socket.destroy();
+      resolve({
+        code,
+        out: buf.toString('utf8', body, body + outLen),
+        err: buf.toString('utf8', body + outLen, body + outLen + errLen),
+      });
     });
   });
 }
@@ -85,6 +97,20 @@ async function main() {
     const {readFileSync} = await import('node:fs');
     const pkg = new URL('../package.json', import.meta.url);
     return {out: JSON.parse(readFileSync(pkg, 'utf8')).version, code: 0};
+  }
+  if (argv[0] === 'native') {
+    // Path of the native client for this platform, to alias or put on PATH.
+    const {existsSync} = await import('node:fs');
+    const {fileURLToPath} = await import('node:url');
+    const ext = process.platform === 'win32' ? '.exe' : '';
+    const exe = fileURLToPath(
+      new URL(
+        `../native/cdt-${process.platform}-${process.arch}${ext}`,
+        import.meta.url,
+      ),
+    );
+    if (existsSync(exe)) return {out: exe, code: 0};
+    return {err: `no native client for this platform at ${exe}`, code: 1};
   }
   if (argv[0] === 'stop') {
     return {out: (await stop()) ? 'stopped' : 'not running', code: 0};

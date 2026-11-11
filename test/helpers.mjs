@@ -49,3 +49,10 @@ export function uidOf(snapshot, pattern) {
   }
   throw new Error(`no snapshot line matches ${pattern}\n${snapshot}`);
 }
+
+// Flags every test daemon starts with. CI adds to them (see ci.yml).
+export const BROWSER_FLAGS = [
+  '--headless',
+  '--isolated',
+  ...(process.env.CDT_TEST_FLAGS ?? '').split(' ').filter(Boolean),
+];
