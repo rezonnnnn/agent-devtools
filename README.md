@@ -68,7 +68,7 @@ Required parameters are positional, the rest are `--name value`. `qai help` list
 | Lighthouse audit | `qai lighthouse_audit` |
 | Heap snapshot | `qai take_heapsnapshot heap.heapsnapshot` |
 | Pages | `qai pages`, `qai new <url>`, `qai page 2`, `--page 2` on any command |
-| Browser options | `qai start --headless --isolated` (any chrome-devtools-mcp flag) |
+| Browser options | `qai start --headless --isolated` (any chrome-devtools-mcp flag), or set them for every start with `QAI_FLAGS="--headless --isolated"`; flags given to `start` are added after `QAI_FLAGS` and win |
 | Several agents, one browser each | `QAI_SESSION=<name>` |
 
 Options qai adds to every command: `-i` interactive elements only, `-d` changes since the last snapshot, `--max N` cap the output and save the rest to a file, `--json` structured output, `--raw` the engine's text verbatim. A lone `-` reads that argument from stdin, which avoids shell-quoting JavaScript.

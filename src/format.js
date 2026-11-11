@@ -59,7 +59,13 @@ function diffLines(nodes, prev, next, opts) {
   return out.length ? out : ['(no changes)'];
 }
 
+// While any emulation is active the engine appends its settings to every
+// reply. Only the `emulate` command's own reply needs them.
+const EMULATION_ECHO =
+  /^(Emulating .*|Default navigation timeout set to \d+ ms)\n?/gm;
+
 function compact(text, opts, state) {
+  if (opts.tool !== 'emulate') text = text.replace(EMULATION_ECHO, '');
   // `Script ran on page and returned:` + fenced JSON -> the JSON itself.
   text = text.replace(SCRIPT_RESULT, '$1');
   // Snapshot lines become nodes; every other line passes through in place, so

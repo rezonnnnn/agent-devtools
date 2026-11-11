@@ -145,11 +145,23 @@ test('get_css_styles', () => {
 });
 
 test('emulate and resize_page', () => {
-  tool('emulate', '--colorScheme', 'dark');
+  assert.match(tool('emulate', '--colorScheme', 'dark'), /Emulating color scheme: dark/);
+  // The engine repeats active emulation on every reply; only emulate shows it.
+  assert.doesNotMatch(snap(), /Emulating/);
+  assert.match(qai.ok('take_snapshot', '--raw'), /Emulating color scheme/);
   assert.equal(qai.ok('eval', 'matchMedia("(prefers-color-scheme: dark)").matches'), 'true');
   tool('emulate', '--colorScheme', 'auto');
   tool('resize_page', '800', '600');
   assert.equal(qai.ok('eval', 'innerWidth'), '800');
+});
+
+test('start keeps QAI_FLAGS and adds its own after them', () => {
+  const q = makeQai(`flags-${process.pid}`, work, {QAI_FLAGS: '--headless'});
+  try {
+    assert.match(q.ok('start', '--isolated'), /flags=\["--headless","--isolated"\]/);
+  } finally {
+    q('stop');
+  }
 });
 
 test('pages: new, list, select, --page, close', () => {

@@ -99,7 +99,8 @@ async function runCommand(tokens, ctx) {
   }
   if (PAGE_LIST_TOOLS.has(tool.name)) trackSelectedPage(text);
   if (tool.name === 'close_page') pageState.delete(args.pageId);
-  return {out: formatResult(result, opts, stateFor(args.pageId ?? 0)), code: 0};
+  const fmt = {...opts, tool: tool.name};
+  return {out: formatResult(result, fmt, stateFor(args.pageId ?? 0)), code: 0};
 }
 
 function help(topic) {

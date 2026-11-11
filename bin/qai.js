@@ -49,6 +49,9 @@ function send(req) {
   });
 }
 
+// Flags from QAI_FLAGS apply to every daemon start, implicit or `qai start`.
+const envFlags = () => (process.env.QAI_FLAGS ?? '').split(/\s+/).filter(Boolean);
+
 const notRunning = e => e.code === 'ENOENT' || e.code === 'ECONNREFUSED';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -129,7 +132,8 @@ async function main() {
   }
   if (argv[0] === 'start') {
     await stop();
-    await spawnDaemon(argv.slice(1));
+    // Explicit flags come last, so `--no-headless` overrides QAI_FLAGS.
+    await spawnDaemon([...envFlags(), ...argv.slice(1)]);
     return sendWhenUp({argv: ['status']});
   }
   const req = {argv, cwd: process.cwd()};
@@ -140,8 +144,7 @@ async function main() {
     if (!notRunning(e)) throw e;
   }
   if (argv[0] === 'status') return {out: 'not running', code: 1};
-  const flags = (process.env.QAI_FLAGS ?? '').split(/\s+/).filter(Boolean);
-  await spawnDaemon(flags);
+  await spawnDaemon(envFlags());
   return sendWhenUp(req);
 }
 

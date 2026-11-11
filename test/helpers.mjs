@@ -5,8 +5,8 @@ const root = path.join(import.meta.dirname, '..');
 const bin = path.join(root, 'bin', 'qai.js');
 
 // Each test file drives its own daemon and browser.
-export function makeQai(session, cwd = root) {
-  const env = {...process.env, QAI_SESSION: session};
+export function makeQai(session, cwd = root, extraEnv = {}) {
+  const env = {...process.env, QAI_SESSION: session, ...extraEnv};
   const run = (...args) => {
     const input = typeof args.at(-1) === 'object' ? args.pop().input : undefined;
     const r = spawnSync(process.execPath, [bin, ...args], {

@@ -33,4 +33,4 @@ A chain stops at the first failing command. uids change after a navigation: take
 - Commands act on the selected page: `pages` lists, `page <n>` selects, `--page <n>` targets one command.
 - Exit code 2 means the call was malformed; stderr shows the usage line to copy.
 - Cap long output with `--max <chars>`; the full text is saved to the path printed.
-- Browser options go to the daemon: `qai start --headless --isolated` accepts any chrome-devtools-mcp flag. `qai stop` closes the browser.
+- Browser options go to the daemon: `qai start --headless --isolated` accepts any chrome-devtools-mcp flag and keeps those in `QAI_FLAGS`. `qai stop` closes the browser.
