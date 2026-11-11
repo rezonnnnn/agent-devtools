@@ -1,0 +1,39 @@
+{
+  "name": "chromedevtools-cli",
+  "version": "0.1.0",
+  "description": "Fast, token-efficient CLI for Chrome DevTools automation. Full chrome-devtools-mcp capability, a fraction of the latency and context cost.",
+  "type": "module",
+  "bin": {
+    "cdt": "bin/cdt.js"
+  },
+  "files": [
+    "bin",
+    "src",
+    "skills"
+  ],
+  "scripts": {
+    "test": "node --test --test-concurrency=1 \"test/*.test.mjs\"",
+    "bench": "node bench/run.mjs"
+  },
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "dependencies": {
+    "chrome-devtools-mcp": "^1.12.0"
+  },
+  "keywords": [
+    "chrome",
+    "devtools",
+    "cdp",
+    "cli",
+    "browser",
+    "automation",
+    "agent",
+    "mcp"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rezonnnnn/Chromedevtools-CLI.git"
+  }
+}

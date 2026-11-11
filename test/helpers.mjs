@@ -1,0 +1,51 @@
+import {spawn, spawnSync} from 'node:child_process';
+import path from 'node:path';
+
+const root = path.join(import.meta.dirname, '..');
+const bin = path.join(root, 'bin', 'cdt.js');
+
+// Each test file drives its own daemon and browser.
+export function makeCdt(session, cwd = root) {
+  const env = {...process.env, CDT_SESSION: session};
+  const run = (...args) => {
+    const input = typeof args.at(-1) === 'object' ? args.pop().input : undefined;
+    const r = spawnSync(process.execPath, [bin, ...args], {
+      env,
+      cwd,
+      input,
+      encoding: 'utf8',
+      timeout: 120_000,
+    });
+    return {out: r.stdout.trimEnd(), err: r.stderr.trimEnd(), code: r.status};
+  };
+  // Runs a command that must succeed and returns its stdout.
+  run.ok = (...args) => {
+    const r = run(...args);
+    if (r.code !== 0) {
+      throw new Error(`cdt ${args.join(' ')} -> ${r.code}\n${r.out}\n${r.err}`);
+    }
+    return r.out;
+  };
+  return run;
+}
+
+export function startFixture() {
+  const child = spawn(
+    process.execPath,
+    [path.join(import.meta.dirname, 'fixture', 'server.mjs')],
+    {stdio: ['ignore', 'pipe', 'inherit']},
+  );
+  return new Promise(resolve => {
+    child.stdout.once('data', d => {
+      resolve({url: String(d).trim(), close: () => child.kill()});
+    });
+  });
+}
+
+// uid of the first snapshot line matching `pattern`.
+export function uidOf(snapshot, pattern) {
+  for (const line of snapshot.split('\n')) {
+    if (pattern.test(line)) return line.trim().split(' ')[0];
+  }
+  throw new Error(`no snapshot line matches ${pattern}\n${snapshot}`);
+}

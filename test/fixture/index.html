@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Fixture</title>
+<style>#hov { width: 120px; padding: 8px; background: #eee; }</style></head>
+<body>
+<h1>Fixture page</h1>
+<form onsubmit="event.preventDefault(); out.textContent = 'Hello ' + this.name.value + ' ' + (this.agree.checked ? 'agreed' : 'declined') + ' ' + this.color.value">
+  <label>Name <input name="name"></label>
+  <label><input type="checkbox" name="agree"> Agree</label>
+  <label>Color <select name="color"><option>red</option><option>blue</option></select></label>
+  <button>Submit</button>
+</form>
+<p id="out">idle</p>
+<button onclick="console.log('clicked-log'); fetch('/api/data').then(r => r.json()).then(d => out.textContent = 'api ' + d.v)">Load</button>
+<button onclick="out.textContent = confirm('sure?') ? 'confirmed' : 'cancelled'">Ask</button>
+<button onclick="const b = document.createElement('button'); b.textContent = 'Fresh'; document.body.append(b)">Add</button>
+<label>Upload <input type="file" onchange="out.textContent = 'file ' + this.files[0].name"></label>
+<div id="hov" onmouseover="out.textContent = 'hovered'">hover me</div>
+<label>Keys <input id="keys" onkeydown="if (event.key === 'Enter') out.textContent = 'enter ' + this.value"></label>
+<div id="src" draggable="true" ondragstart="event.dataTransfer.setData('text', 'x')">drag source</div>
+<div id="dst" ondragover="event.preventDefault()" ondrop="event.preventDefault(); out.textContent = 'dropped'">drop target</div>
+<script>const out = document.getElementById('out');</script>
+</body>
+</html>
