@@ -7,18 +7,18 @@ cdt 0.1.0, chrome-devtools-mcp 1.12.0, agent-browser 0.42.0. Tokens: o200k_base 
 
 | step | cdt | cdt (Node client) | official CLI | MCP server | agent-browser |
 | --- | --: | --: | --: | --: | --: |
-| snapshot | 69 ms | 154 ms | 985 ms | 31 ms | 93 ms |
-| snapshot, interactive only | 65 ms | 103 ms | 1081 ms | 28 ms | 91 ms |
-| evaluate script | 139 ms | 178 ms | 1185 ms | 221 ms | 50 ms |
-| click | 288 ms | 316 ms | 1322 ms | 267 ms | 66 ms |
-| screenshot to file | 129 ms | 139 ms | 1297 ms | 104 ms | 111 ms |
-| navigate | 168 ms | 215 ms | 1320 ms | 148 ms | 89 ms |
+| snapshot | 73 ms | 87 ms | 887 ms | 33 ms | 108 ms |
+| snapshot, interactive only | 67 ms | 86 ms | 869 ms | 30 ms | 85 ms |
+| evaluate script | 143 ms | 175 ms | 1067 ms | 222 ms | 41 ms |
+| click | 288 ms | 329 ms | 1085 ms | 263 ms | 48 ms |
+| screenshot to file | 101 ms | 134 ms | 886 ms | 84 ms | 100 ms |
+| navigate | 169 ms | 200 ms | 979 ms | 134 ms | 105 ms |
 
 ## Cold start (nothing running to first page loaded)
 
 |  | cdt | cdt (Node client) | official CLI | MCP server | agent-browser |
 | --- | --: | --: | --: | --: | --: |
-| cold start | 1510 ms | 1993 ms | 2692 ms | 958 ms | 2655 ms |
+| cold start | 1253 ms | 1182 ms | 2549 ms | 1236 ms | 2513 ms |
 
 ## Tokens for one look at a content-heavy page
 
@@ -32,7 +32,7 @@ cdt 0.1.0, chrome-devtools-mcp 1.12.0, agent-browser 0.42.0. Tokens: o200k_base 
 |  | cdt | cdt (Node client) | official CLI | MCP server | agent-browser |
 | --- | --: | --: | --: | --: | --: |
 | invocations | 2 | 2 | 7 | 6 | 2 |
-| wall time | 1115 ms | 1203 ms | 7847 ms | 1181 ms | 167 ms |
+| wall time | 1124 ms | 1168 ms | 8001 ms | 1182 ms | 317 ms |
 | output tokens | 157 | 157 | 347 | 341 | 175 |
 
 ## Fixed context cost

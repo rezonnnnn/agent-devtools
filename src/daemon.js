@@ -20,7 +20,7 @@ import {
 } from './args.js';
 import {formatResult} from './format.js';
 import {McpClient, upstreamBin} from './mcp.js';
-import {outDir, sockPath} from './paths.js';
+import {assertPrivateDir, outDir, sockPath} from './paths.js';
 
 const userFlags = process.argv.slice(2);
 const flags = [...userFlags];
@@ -31,7 +31,8 @@ if (!flags.some(f => /^--(no-)?usage-?statistics/i.test(f))) {
 
 const sock = sockPath();
 const startedAt = new Date();
-fs.mkdirSync(outDir, {recursive: true});
+fs.mkdirSync(outDir, {recursive: true, mode: 0o700});
+assertPrivateDir(outDir);
 const logStream = fs.createWriteStream(path.join(outDir, 'daemon.log'), {
   flags: 'a',
 });
@@ -58,6 +59,16 @@ const resultText = result =>
     .filter(p => p.type === 'text')
     .map(p => p.text)
     .join('\n');
+
+// Only page-management tools print the page list. Text from anywhere else
+// (console output, script results, page content) must not move the selection.
+const PAGE_LIST_TOOLS = new Set([
+  'list_pages',
+  'select_page',
+  'new_page',
+  'close_page',
+  'navigate_page',
+]);
 
 function trackSelectedPage(text) {
   const m = /^(\d+): .*\[selected\]$/m.exec(text);
@@ -86,7 +97,7 @@ async function runCommand(tokens, ctx) {
     if (injected) currentPage = undefined;
     return {err: text, code: 1};
   }
-  trackSelectedPage(text);
+  if (PAGE_LIST_TOOLS.has(tool.name)) trackSelectedPage(text);
   if (tool.name === 'close_page') pageState.delete(args.pageId);
   return {out: formatResult(result, opts, stateFor(args.pageId ?? 0)), code: 0};
 }
@@ -129,8 +140,14 @@ function help(topic) {
 
 async function handle(req) {
   const argv = req.argv ?? [];
-  await ready;
   const cmd = argv[0];
+  // Stopping must work even if the engine never came up.
+  if (cmd === 'stop') {
+    setImmediate(() => shutdown(0));
+    return {out: 'stopped', code: 0};
+  }
+  if (stopping) return {err: 'cdt daemon is stopping', code: 1};
+  await ready;
   if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') {
     return {out: help(argv[1]), code: 0};
   }
@@ -143,17 +160,13 @@ async function handle(req) {
       code: 0,
     };
   }
-  if (cmd === 'stop') {
-    setImmediate(() => shutdown(0));
-    return {out: 'stopped', code: 0};
-  }
   if (cmd === 'tools') {
     return {out: JSON.stringify(mcp.tools), code: 0};
   }
   if (req.cwd) await mcp.addRoot(req.cwd);
   const outs = [];
   for (const tokens of splitChain(argv)) {
-    if (tokens.at(-1) === '--help' || tokens.at(-1) === '-h') {
+    if (tokens.at(-1) === '--help') {
       outs.push(help(tokens[0]));
       continue;
     }
@@ -196,8 +209,10 @@ const server = net.createServer(socket => {
 async function shutdown(code) {
   if (stopping) return;
   stopping = true;
-  server.close();
+  // Close the browser before releasing the socket, so a `cdt start` that
+  // follows never races the old browser for its profile.
   await mcp.close();
+  server.close();
   if (process.platform !== 'win32') {
     try {
       fs.unlinkSync(sock);
@@ -239,7 +254,12 @@ server.listen(sock, () => {
   if (process.platform !== 'win32') fs.chmodSync(sock, 0o600);
   log(`listening on ${sock}, flags ${JSON.stringify(flags)}`);
 });
-ready = mcp.start(flags, [os.tmpdir()]).catch(e => {
+ready = Promise.race([
+  mcp.start(flags, [os.tmpdir()]),
+  new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('no response within 60 s')), 60_000).unref(),
+  ),
+]).catch(e => {
   // Report the failure to whoever is waiting, then exit.
   setTimeout(() => shutdown(1), 200);
   throw new Error(`could not start chrome-devtools-mcp: ${e.message}`);

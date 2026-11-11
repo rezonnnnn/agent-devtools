@@ -21,6 +21,8 @@
 #else
 #include <errno.h>
 #include <pwd.h>
+#include <signal.h>
+#include <sys/stat.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -90,37 +92,44 @@ static int needs_node(int argc, char **argv) {
 }
 
 /*
- * True once the whole framed reply has arrived. Lets the client return without
- * waiting for end-of-stream, which on Windows trails the data by tens of
- * milliseconds.
+ * Parses the reply header. Returns 1 once the whole framed reply has arrived,
+ * 0 while it is incomplete or if it is malformed. Returning as soon as it is
+ * complete matters: on Windows end-of-stream trails the data by tens of
+ * milliseconds. The length checks cannot wrap around.
  */
-static int reply_complete(const buf_t *r) {
+static int parse_reply(const buf_t *r, int *code, size_t *out_len,
+                       size_t *err_len, const char **body) {
   if (!r->data) return 0;
-  char *nl = memchr(r->data, '\n', r->len);
+  const char *nl = memchr(r->data, '\n', r->len);
+  unsigned long long out, err;
+  if (!nl || sscanf(r->data, "%d %llu %llu", code, &out, &err) != 3) return 0;
+  size_t avail = r->len - (size_t)(nl + 1 - r->data);
+  if (out > avail || err > avail - out) return 0;
+  *out_len = (size_t)out;
+  *err_len = (size_t)err;
+  *body = nl + 1;
+  return 1;
+}
+
+static int reply_complete(const buf_t *r) {
   int code;
-  unsigned long long out_len, err_len;
-  if (!nl || sscanf(r->data, "%d %llu %llu", &code, &out_len, &err_len) != 3) {
-    return 0;
-  }
-  return (size_t)(nl + 1 - r->data) + out_len + err_len <= r->len;
+  size_t out_len, err_len;
+  const char *body;
+  return parse_reply(r, &code, &out_len, &err_len, &body);
 }
 
 /* Prints the framed reply; returns the exit code, or -1 if malformed. */
 static int print_reply(const buf_t *r) {
-  if (!r->data) return -1;
-  char *nl = memchr(r->data, '\n', r->len);
-  if (!nl) return -1;
   int code;
-  unsigned long long out_len, err_len;
-  if (sscanf(r->data, "%d %llu %llu", &code, &out_len, &err_len) != 3) return -1;
-  const char *body = nl + 1;
-  if ((size_t)(body - r->data) + out_len + err_len > r->len) return -1;
+  size_t out_len, err_len;
+  const char *body;
+  if (!parse_reply(r, &code, &out_len, &err_len, &body)) return -1;
   if (out_len) {
-    fwrite(body, 1, (size_t)out_len, stdout);
+    fwrite(body, 1, out_len, stdout);
     fputc('\n', stdout);
   }
   if (err_len) {
-    fwrite(body + out_len, 1, (size_t)err_len, stderr);
+    fwrite(body + out_len, 1, err_len, stderr);
     fputc('\n', stderr);
   }
   fflush(stdout);
@@ -180,9 +189,9 @@ static void quote_arg(wchar_t **out, size_t *len, size_t *cap, const wchar_t *ar
 }
 
 static int run_node(int argc, wchar_t **wargv) {
-  wchar_t script[MAX_PATH * 2];
-  DWORD n = GetModuleFileNameW(NULL, script, MAX_PATH);
-  if (!n) return 1;
+  wchar_t script[32768];
+  DWORD n = GetModuleFileNameW(NULL, script, 32768 - 16);
+  if (!n || n >= 32768 - 16) return 1;
   wchar_t *slash = wcsrchr(script, L'\\');
   if (!slash) return 1;
   wcscpy(slash, L"\\..\\bin\\cdt.js");
@@ -228,12 +237,13 @@ int wmain(int argc, wchar_t **wargv) {
     buf_clean(&pipe, utf8(session));
   }
 
+  const DWORD pipe_flags = SECURITY_SQOS_PRESENT | SECURITY_IDENTIFICATION;
   HANDLE h = CreateFileA(pipe.data, GENERIC_READ | GENERIC_WRITE, 0, NULL,
-                         OPEN_EXISTING, 0, NULL);
+                         OPEN_EXISTING, pipe_flags, NULL);
   if (h == INVALID_HANDLE_VALUE && GetLastError() == ERROR_PIPE_BUSY &&
       WaitNamedPipeA(pipe.data, 2000)) {
     h = CreateFileA(pipe.data, GENERIC_READ | GENERIC_WRITE, 0, NULL,
-                    OPEN_EXISTING, 0, NULL);
+                    OPEN_EXISTING, pipe_flags, NULL);
   }
   if (h == INVALID_HANDLE_VALUE) {
     SetConsoleOutputCP(old_cp);
@@ -318,12 +328,24 @@ int main(int argc, char **argv) {
   buf_str(&path, "/cdt-");
   struct passwd *pw = getpwuid(geteuid());
   buf_clean(&path, pw ? pw->pw_name : "user");
+
+  /* Never talk to a socket in a directory someone else could have planted. */
+  struct stat st;
+  if (lstat(path.data, &st) < 0) return run_node(argv); /* no daemon yet */
+  if (!S_ISDIR(st.st_mode) || st.st_uid != geteuid() || (st.st_mode & 077)) {
+    fprintf(stderr, "cdt: %s must be a directory owned by you with mode 700\n",
+            path.data);
+    return 1;
+  }
+
+  buf_str(&path, "/daemon");
   const char *session = getenv("CDT_SESSION");
   if (session && *session) {
     buf_str(&path, "-");
     buf_clean(&path, session);
   }
   buf_str(&path, ".sock");
+  signal(SIGPIPE, SIG_IGN); /* a dying daemon must not kill us mid-write */
 
   struct sockaddr_un addr;
   memset(&addr, 0, sizeof addr);

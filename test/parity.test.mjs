@@ -2,7 +2,7 @@
 // flags, cdt exposes exactly that catalogue, and can build a call for each.
 import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
-import {parseCommand, usage} from '../src/args.js';
+import {parseCommand, splitChain, usage} from '../src/args.js';
 import {McpClient} from '../src/mcp.js';
 import {BROWSER_FLAGS, makeCdt} from './helpers.mjs';
 
@@ -77,11 +77,11 @@ test('every parameter of every tool is reachable from the command line', async (
                 ),
               )
             : sample(items);
-        tokens.push(`--${name}`, value);
+        tokens.push(`--${name}=${value}`);
         expected[name] = [items.type === 'object' ? JSON.parse(value) : coerced(items, value)];
       } else {
         const value = sample(def);
-        tokens.push(`--${name}`, value);
+        tokens.push(`--${name}=${value}`);
         expected[name] = coerced(def, value);
       }
       params++;
@@ -99,3 +99,26 @@ function coerced(def, value) {
   if (def.type === 'object') return JSON.parse(value);
   return value;
 }
+
+test('argument edge cases', async () => {
+  const tools = await upstreamCatalogue(BASE);
+  const parse = (...tokens) => parseCommand(tokens, tools).args;
+  // A boolean flag never swallows the word after it.
+  assert.deepEqual(parse('click', '--dblClick', 'true'), {dblClick: true, uid: 'true'});
+  assert.deepEqual(parse('click', 'u1', '--no-dblClick'), {dblClick: false, uid: 'u1'});
+  assert.deepEqual(parse('click', 'u1', '--dblClick=false'), {dblClick: false, uid: 'u1'});
+  assert.throws(() => parse('click', 'u1', '--no-dblClick=maybe'), /takes no value/);
+  // `--` ends option parsing and chaining, so any literal can be passed.
+  assert.deepEqual(splitChain(['press_key', '--', '+']), [['press_key', '--', '+']]);
+  assert.deepEqual(parse('press_key', '--', '+'), {key: '+'});
+  assert.deepEqual(parse('type_text', '--', '-d'), {text: '-d'});
+  assert.deepEqual(splitChain(['a', '1', '+', 'b']), [['a', '1'], ['b']]);
+  // Arrays: repeated values, one JSON list, or a literal that only looks like JSON.
+  assert.deepEqual(parse('wait_for', 'a', 'b'), {text: ['a', 'b']});
+  assert.deepEqual(parse('wait_for', '["a","b"]'), {text: ['a', 'b']});
+  assert.deepEqual(parse('wait_for', '[draft] saved'), {text: ['[draft] saved']});
+  // Only file parameters are resolved against the working directory.
+  const {args} = parseCommand(['take_screenshot', '--filePath', 'a.png', '--uid', 'path'], tools, {cwd: process.cwd()});
+  assert.ok(args.filePath.endsWith('a.png') && args.filePath !== 'a.png');
+  assert.equal(args.uid, 'path');
+});

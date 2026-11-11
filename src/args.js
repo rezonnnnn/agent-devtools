@@ -137,13 +137,18 @@ function coerceItem(value, def, name) {
   return {[keys[0]]: value.slice(0, eq), [keys[1]]: value.slice(eq + 1)};
 }
 
+// A value that is a JSON array supplies the whole list; anything else is one
+// element.
 function addArrayValue(args, name, value, def) {
   const list = (args[name] ??= []);
-  if (value.trimStart().startsWith('[')) list.push(...parseJson(value, name));
-  else list.push(coerceItem(value, def, name));
+  if (value.trimStart().startsWith('[')) {
+    try {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) return void list.push(...parsed);
+    } catch {}
+  }
+  list.push(coerceItem(value, def, name));
 }
-
-const FN_RE = /^\s*(async\s+)?(function\b|\([^)]*\)\s*=>|[\w$]+\s*=>)/;
 
 export function parseCommand(tokens, tools, {cwd, stdin} = {}) {
   const [name, ...rest] = tokens;
@@ -191,11 +196,15 @@ export function parseCommand(tokens, tools, {cwd, stdin} = {}) {
     const type = prop ? props[prop].type : OWN_OPTS[own];
     let value;
     if (type === 'boolean') {
-      if (inline !== undefined) value = inline;
-      else if (rest[i + 1] === 'true' || rest[i + 1] === 'false') {
-        value = rest[++i];
-      } else value = 'true';
-      if (negated) value = value === 'true' ? 'false' : 'true';
+      // --flag, --no-flag or --flag=false. A following word is never
+      // consumed: it may be a positional argument.
+      value = inline ?? 'true';
+      if (negated) {
+        if (inline !== undefined) {
+          throw new UsageError(`${tool.name}: --${flag} takes no value`);
+        }
+        value = 'false';
+      }
     } else {
       value = inline ?? rest[++i];
       if (value === undefined) {
@@ -232,33 +241,42 @@ export function parseCommand(tokens, tools, {cwd, stdin} = {}) {
     );
   }
 
-  // `cdt eval document.title` -> a function, which is what the tool expects.
+  // The tool expects a function. Accept a bare expression too
+  // (`cdt eval document.title`): evaluate the source, and call the result only
+  // if it is a function. Deciding at run time needs no guessing from the text.
   if (
     tool.name === 'evaluate_script' &&
     typeof args.function === 'string' &&
-    args.format === undefined &&
-    !FN_RE.test(args.function)
+    args.format === undefined
   ) {
-    args.function = `() => (${args.function})`;
+    args.function =
+      `async (...args) => { const v = (${args.function}\n); ` +
+      `return typeof v === 'function' ? v(...args) : v; }`;
   }
 
   // Relative file paths are relative to where the command was run.
   if (cwd) {
     for (const [p, v] of Object.entries(args)) {
-      if (!/path/i.test(p)) continue;
-      if (typeof v === 'string') args[p] = path.resolve(cwd, v);
-      else if (Array.isArray(v)) args[p] = v.map(f => path.resolve(cwd, f));
+      if (!/Paths?$/.test(p)) continue;
+      const abs = f => (typeof f === 'string' ? path.resolve(cwd, f) : f);
+      args[p] = Array.isArray(v) ? v.map(abs) : abs(v);
     }
   }
   return {tool, args, opts};
 }
 
-// Splits `a 1 + b 2` into [[a, 1], [b, 2]].
+// Splits `a 1 + b 2` into [[a, 1], [b, 2]]. After `--` everything belongs to
+// the current command, so a literal + can be passed: `cdt press_key -- +`.
 export function splitChain(argv) {
   const chain = [[]];
+  let literal = false;
   for (const tok of argv) {
-    if (tok === '+') chain.push([]);
-    else chain.at(-1).push(tok);
+    if (tok === '+' && !literal) {
+      chain.push([]);
+      continue;
+    }
+    if (tok === '--') literal = true;
+    chain.at(-1).push(tok);
   }
   return chain.filter(c => c.length);
 }

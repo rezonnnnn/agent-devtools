@@ -11,7 +11,7 @@ Measured against chrome-devtools-mcp 1.12.0 and agent-browser 0.42.0 ([full resu
 
 | | cdt | official `chrome-devtools` CLI | chrome-devtools-mcp (MCP) | agent-browser |
 |---|--:|--:|--:|--:|
-| Read the page (snapshot) | **69 ms** | 985 ms | 31 ms | 93 ms |
+| Read the page (snapshot) | **73 ms** | 887 ms | 33 ms | 108 ms |
 | Tokens to learn the interface | **513** | 2,919 | 6,619 | 3,644 |
 | Tokens to see a content-heavy page's controls | **3,110** | 7,734 | 7,734 | 3,896 |
 | Form task: output tokens | **157** | 347 | 341 | 175 |
@@ -83,19 +83,19 @@ Median of 15 warm runs per step, all against pages served locally.
 
 | Step | cdt | cdt (Node client) | official CLI | MCP server | agent-browser |
 |---|--:|--:|--:|--:|--:|
-| snapshot | 69 ms | 154 ms | 985 ms | 31 ms | 93 ms |
-| snapshot, interactive only | 65 ms | 103 ms | 1,081 ms | 28 ms | 91 ms |
-| evaluate script | 139 ms | 178 ms | 1,185 ms | 221 ms | 50 ms |
-| click | 288 ms | 316 ms | 1,322 ms | 267 ms | 66 ms |
-| screenshot to file | 129 ms | 139 ms | 1,297 ms | 104 ms | 111 ms |
-| navigate | 168 ms | 215 ms | 1,320 ms | 148 ms | 89 ms |
-| cold start to first page | 1,510 ms | 1,993 ms | 2,692 ms | 958 ms | 2,655 ms |
+| snapshot | 73 ms | 87 ms | 887 ms | 33 ms | 108 ms |
+| snapshot, interactive only | 67 ms | 86 ms | 869 ms | 30 ms | 85 ms |
+| evaluate script | 143 ms | 175 ms | 1,067 ms | 222 ms | 41 ms |
+| click | 288 ms | 329 ms | 1,085 ms | 263 ms | 48 ms |
+| screenshot to file | 101 ms | 134 ms | 886 ms | 84 ms | 100 ms |
+| navigate | 169 ms | 200 ms | 979 ms | 134 ms | 105 ms |
+| cold start to first page | 1,253 ms | 1,182 ms | 2,549 ms | 1,236 ms | 2,513 ms |
 
 Reading the numbers:
 
-- **Against the official CLI**, cdt is about 5 to 16 times faster, step for step. The official client spends about a second starting up on each command; its daemon is as fast as ours because it is the same engine.
-- **Against the MCP server**, cdt pays roughly 35 ms per command to start a process, which a persistent MCP connection does not. cdt's `eval` is faster only because it skips the engine's settle wait, which an MCP caller can also request (`waitForStableDom: false`).
-- **Against agent-browser**, cdt is faster at reading the page and slower at acting on it. After every click, fill or navigation the DevTools engine watches about 200 ms for a navigation and for the DOM to settle, so the next snapshot reflects the result. agent-browser returns immediately. That wait is the engine's, and cdt keeps it.
+- **Against the official CLI**, cdt is 4 to 13 times faster, step for step. The official client spends about a second starting up on each command; its daemon is as fast as ours because it is the same engine.
+- **Against the MCP server**, cdt pays roughly 40 ms per command to start a process, which a persistent MCP connection does not. cdt's `eval` is faster only because it skips the engine's settle wait, which an MCP caller can also request (`waitForStableDom: false`).
+- **Against agent-browser**, cdt reads the page as fast or faster and acts on it more slowly. After every click, fill or navigation the DevTools engine watches about 200 ms for a navigation and for the DOM to settle, so the next snapshot reflects the result. agent-browser returns immediately. That wait is the engine's, and cdt keeps it.
 
 ### Context cost
 
@@ -158,6 +158,13 @@ The agent-browser column reflects its `--help` at 0.42.0.
 - the tool list cdt reports is compared with the server's, for default flags and with every category enabled;
 - every parameter of every tool (214 across 59 tools) is checked to be reachable from the command line;
 - the native client is compared with the Node client on output, exit codes, quoting and Unicode.
+
+## Security
+
+- The daemon accepts commands only from the user who started it. On Linux and macOS its socket and every file cdt writes live in a private directory (`cdt-<user>`, mode 700) that both clients verify before connecting.
+- On Windows the daemon listens on a named pipe whose name includes the user name, the same model the official CLI uses. On a machine shared with users you do not trust, another user could claim that pipe name before your daemon starts; run cdt there only inside your own session or container.
+- Page content is untrusted. cdt prints it but never acts on it: nothing in a page's text can select a page, run a command or change an option.
+- Usage statistics that chrome-devtools-mcp would send to Google are off unless you start the daemon with `--usage-statistics`.
 
 ## Limits
 

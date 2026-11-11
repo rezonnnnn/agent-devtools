@@ -2,13 +2,25 @@
 // Thin client. Everything it imports is paid on every command, so it does one
 // thing: hand argv to the daemon and print the reply.
 import net from 'node:net';
-import {daemonScript, sockPath} from '../src/paths.js';
+import {
+  assertPrivateDir,
+  daemonScript,
+  outDir,
+  sockPath,
+} from '../src/paths.js';
 
 const argv = process.argv.slice(2);
 const sock = sockPath();
 
 function send(req) {
   return new Promise((resolve, reject) => {
+    // Never talk to a socket in a directory someone else could have planted.
+    // A missing directory just means no daemon has run yet.
+    try {
+      assertPrivateDir(outDir);
+    } catch (e) {
+      if (e.code !== 'ENOENT') return reject(e);
+    }
     const socket = net.connect(sock);
     let buf = Buffer.alloc(0);
     socket.on('connect', () => socket.write(JSON.stringify(req) + '\n'));

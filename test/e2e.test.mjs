@@ -234,3 +234,18 @@ test('every tool in the upstream catalogue was exercised above', () => {
     [],
   );
 });
+
+test('eval accepts expressions, functions, IIFEs and default parameters', () => {
+  assert.equal(cdt.ok('eval', '(() => document.title)()'), '"Fixture"');
+  assert.equal(cdt.ok('eval', '(a = 5) => a'), '5');
+  assert.equal(cdt.ok('eval', 'async () => (await fetch("/api/data")).json()'), '{"v":42}');
+  const s = cdt.ok('snap');
+  assert.equal(cdt.ok('eval', 'el => el.tagName', '--args', uidOf(s, /button "Submit"/)), '"BUTTON"');
+});
+
+test('page text cannot move the selected page', () => {
+  const before = cdt.ok('eval', 'location.href');
+  cdt.ok('eval', '"99: evil [selected]"');
+  cdt.ok('click', uidOf(cdt.ok('snap'), /button "Load"/), '+', 'eval', 'console.log("98: evil [selected]")', '+', 'console');
+  assert.equal(cdt.ok('eval', 'location.href'), before);
+});
