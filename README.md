@@ -26,7 +26,7 @@ Where agent-devtools does not lead: a persistent MCP connection answers a single
 agent-devtools (native client, ~80 KB)  ──pipe──>  agent-devtools daemon  ──MCP stdio──>  chrome-devtools-mcp  ──CDP──>  Chrome
 ```
 
-- The **daemon** starts on the first command and keeps the browser open between commands. It speaks the public MCP protocol to an unmodified chrome-devtools-mcp, and builds the command line from the tool list the server reports. A tool added upstream is a agent-devtools command the same day, with no release.
+- The **daemon** starts on the first command and keeps the browser open between commands. It speaks the public MCP protocol to an unmodified chrome-devtools-mcp, and builds the command line from the tool list the server reports. A tool added upstream is an agent-devtools command the same day, with no release.
 - The **client** only forwards arguments and prints the reply. The native client starts in a few milliseconds; a Node client (`bin/agent-devtools.js`) does the same job everywhere Node runs.
 - The **output layer** removes syntax that carries no information, filters and diffs snapshots, and writes images to disk instead of the terminal. `--raw` returns the engine's text untouched.
 
@@ -175,4 +175,4 @@ The agent-browser column reflects its `--help` at 0.42.0.
 
 ## License
 
-Apache-2.0. agent-devtools depends on chrome-devtools-mcp (Apache-2.0, Google LLC) and is an independent project, not affiliated with or endorsed by Google or the Chrome DevTools team.
+Copyright 2026 rezonnnnn. Licensed under Apache-2.0. agent-devtools depends on chrome-devtools-mcp (Apache-2.0, Google LLC) and is an independent project, not affiliated with or endorsed by Google or the Chrome DevTools team.
